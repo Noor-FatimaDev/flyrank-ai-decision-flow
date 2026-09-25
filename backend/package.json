@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "inngest-cli": "^1.45.1"
+  },
+  "allowScripts": {
+    "inngest-cli@1.45.1": true
+  },
+  "scripts": {
+   "inngest:dev": ".\\node_modules\\inngest-cli\\bin\\inngest.exe dev"
+  }
+}
