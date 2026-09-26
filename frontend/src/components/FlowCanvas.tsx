@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -28,9 +28,36 @@ export default function FlowCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [nodeId, setNodeId] = useState(2);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load saved state once, when the page first opens
+  useEffect(() => {
+    const saved = localStorage.getItem('flowState');
+    if (saved) {
+      const { nodes: savedNodes, edges: savedEdges } = JSON.parse(saved);
+      setNodes(savedNodes);
+      setEdges(savedEdges);
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save state — but only after loading has finished
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('flowState', JSON.stringify({ nodes, edges }));
+  }, [nodes, edges, isLoaded]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => {
+      const isYes = params.sourceHandle === 'yes';
+      const newEdge = {
+        ...params,
+        label: isYes ? 'YES' : 'NO',
+        style: { stroke: isYes ? 'green' : 'red' },
+        labelStyle: { fill: isYes ? 'green' : 'red', fontWeight: 700 },
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
     [setEdges]
   );
 
