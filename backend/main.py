@@ -5,6 +5,7 @@ from openai import OpenAI
 from fastapi.middleware.cors import CORSMiddleware
 import inngest
 import inngest.fast_api
+import requests as http
 
 load_dotenv()
 
@@ -87,10 +88,14 @@ async def run_workflow(ctx: inngest.Context) -> dict:
 
 @app.post("/api/run")
 async def trigger_run(payload: dict):
-    await inngest_client.send(
+    result = await inngest_client.send(
         inngest.Event(name="workflow/run", data=payload)
     )
-    return {"status": "started"}
+    return {"status": "started", "event_id": result[0]}
 
+@app.get("/api/run/{event_id}")
+async def get_run_status(event_id: str):
+    response = http.get(f"http://localhost:8288/v1/events/{event_id}/runs")
+    return response.json()
 
 inngest.fast_api.serve(app, inngest_client, [run_workflow])

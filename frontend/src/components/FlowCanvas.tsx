@@ -83,23 +83,35 @@ export default function FlowCanvas() {
     setNodeId((id) => id + 1);
   };
 
-  const runWorkflow = async () => {
-    setIsRunning(true);
-    setResult(null);
-    try {
-      const res = await fetch('http://localhost:8000/api/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodes, edges }),
-      });
-      const data = await res.json();
-      setResult(data);
-    } catch (err) {
-      setResult({ error: String(err) });
-    } finally {
+ const runWorkflow = async () => {
+  setIsRunning(true);
+  setResult(null);
+
+  const res = await fetch('http://localhost:8000/api/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nodes, edges }),
+  });
+  const { event_id } = await res.json();
+
+  const poll = async () => {
+    const statusRes = await fetch(`http://localhost:8000/api/run/${event_id}`);
+    const statusData = await statusRes.json();
+    const run = statusData.data?.[0];
+
+    if (run?.status === 'Completed') {
+      setResult(run.output);
       setIsRunning(false);
+    } else if (run?.status === 'Failed') {
+      setResult({ error: 'Workflow failed', details: run });
+      setIsRunning(false);
+    } else {
+      setTimeout(poll, 1000);
     }
   };
+
+  poll();
+ };
 
   const nodesWithHandlers = nodes.map((node) => ({
     ...node,
