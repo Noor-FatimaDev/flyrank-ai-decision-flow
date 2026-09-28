@@ -2,12 +2,20 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from openai import OpenAI
+from fastapi.middleware.cors import CORSMiddleware
 import inngest
 import inngest.fast_api
 
 load_dotenv()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 inngest_client = inngest.Inngest(
     app_id="ai-decision-flow",

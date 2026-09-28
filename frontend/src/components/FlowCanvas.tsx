@@ -29,8 +29,9 @@ export default function FlowCanvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [nodeId, setNodeId] = useState(2);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [result, setResult] = useState<any>(null);
 
-  // Load saved state once, when the page first opens
   useEffect(() => {
     const saved = localStorage.getItem('flowState');
     if (saved) {
@@ -41,7 +42,6 @@ export default function FlowCanvas() {
     setIsLoaded(true);
   }, []);
 
-  // Save state — but only after loading has finished
   useEffect(() => {
     if (!isLoaded) return;
     localStorage.setItem('flowState', JSON.stringify({ nodes, edges }));
@@ -83,6 +83,24 @@ export default function FlowCanvas() {
     setNodeId((id) => id + 1);
   };
 
+  const runWorkflow = async () => {
+    setIsRunning(true);
+    setResult(null);
+    try {
+      const res = await fetch('http://localhost:8000/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodes, edges }),
+      });
+      const data = await res.json();
+      setResult(data);
+    } catch (err) {
+      setResult({ error: String(err) });
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   const nodesWithHandlers = nodes.map((node) => ({
     ...node,
     data: { ...node.data, onChange: (value: string) => updateNodeLabel(node.id, value) },
@@ -92,12 +110,35 @@ export default function FlowCanvas() {
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      <button
-        onClick={addNode}
-        style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, padding: '8px 16px' }}
-      >
-        Add Node
-      </button>
+      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, display: 'flex', gap: 8 }}>
+        <button onClick={addNode} style={{ padding: '8px 16px' }}>
+          Add Node
+        </button>
+        <button onClick={runWorkflow} disabled={isRunning} style={{ padding: '8px 16px' }}>
+          {isRunning ? 'Running...' : 'Run'}
+        </button>
+      </div>
+
+      {result && (
+        <pre
+          style={{
+            position: 'absolute',
+            top: 60,
+            left: 10,
+            zIndex: 10,
+            background: 'white',
+            border: '1px solid #ccc',
+            padding: 10,
+            maxWidth: 400,
+            maxHeight: 300,
+            overflow: 'auto',
+            fontSize: 12,
+          }}
+        >
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      )}
+
       <ReactFlow
         nodes={nodesWithHandlers}
         edges={edges}
