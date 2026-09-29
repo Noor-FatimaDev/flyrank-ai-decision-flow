@@ -6,7 +6,7 @@ A visual workflow builder where each node is an AI-powered decision step. Draw a
 
 ## Screenshot
 
-![AI decision flow example](assets/ai-decision-flow.png)
+![AI decision flow example](flow.png)
 
 ## How it works
 
