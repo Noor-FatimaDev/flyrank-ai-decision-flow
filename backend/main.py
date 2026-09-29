@@ -71,9 +71,26 @@ async def run_workflow(ctx: inngest.Context) -> dict:
     execution_order = []
     current = find_start_node(nodes, edges)
 
+    if current is None:
+        return {
+            "execution_order": [],
+            "status": "error",
+            "message": "No start node found — every node has something pointing into it, or the graph is empty.",
+        }
+
     while current is not None:
         node_id = current["id"]
-        prompt = current["data"]["label"]
+        prompt = current["data"].get("label", "")
+
+        if not prompt or not prompt.strip():
+            execution_order.append(
+                {"node_id": node_id, "prompt": prompt, "answer": None, "error": "Empty prompt"}
+            )
+            return {
+                "execution_order": execution_order,
+                "status": "error",
+                "message": f"Node {node_id} has an empty prompt — the workflow stopped there.",
+            }
 
         answer = await ctx.step.run(
             f"ask-{node_id}",
@@ -83,7 +100,7 @@ async def run_workflow(ctx: inngest.Context) -> dict:
         execution_order.append({"node_id": node_id, "prompt": prompt, "answer": answer})
         current = find_next_node(nodes, edges, node_id, answer)
 
-    return {"execution_order": execution_order}
+    return {"execution_order": execution_order, "status": "completed"}
 
 
 @app.post("/api/run")

@@ -83,35 +83,35 @@ export default function FlowCanvas() {
     setNodeId((id) => id + 1);
   };
 
- const runWorkflow = async () => {
-  setIsRunning(true);
-  setResult(null);
+  const runWorkflow = async () => {
+    setIsRunning(true);
+    setResult(null);
 
-  const res = await fetch('http://localhost:8000/api/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nodes, edges }),
-  });
-  const { event_id } = await res.json();
+    const res = await fetch('http://localhost:8000/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nodes, edges }),
+    });
+    const { event_id } = await res.json();
 
-  const poll = async () => {
-    const statusRes = await fetch(`http://localhost:8000/api/run/${event_id}`);
-    const statusData = await statusRes.json();
-    const run = statusData.data?.[0];
+    const poll = async () => {
+      const statusRes = await fetch(`http://localhost:8000/api/run/${event_id}`);
+      const statusData = await statusRes.json();
+      const run = statusData.data?.[0];
 
-    if (run?.status === 'Completed') {
-      setResult(run.output);
-      setIsRunning(false);
-    } else if (run?.status === 'Failed') {
-      setResult({ error: 'Workflow failed', details: run });
-      setIsRunning(false);
-    } else {
-      setTimeout(poll, 1000);
-    }
+      if (run?.status === 'Completed') {
+        setResult(run.output);
+        setIsRunning(false);
+      } else if (run?.status === 'Failed') {
+        setResult({ error: 'Workflow failed', details: run });
+        setIsRunning(false);
+      } else {
+        setTimeout(poll, 1000);
+      }
+    };
+
+    poll();
   };
-
-  poll();
- };
 
   const nodesWithHandlers = nodes.map((node) => ({
     ...node,
@@ -131,8 +131,8 @@ export default function FlowCanvas() {
         </button>
       </div>
 
-      {result && (
-        <pre
+      {result?.execution_order && (
+        <div
           style={{
             position: 'absolute',
             top: 60,
@@ -140,15 +140,56 @@ export default function FlowCanvas() {
             zIndex: 10,
             background: 'white',
             border: '1px solid #ccc',
-            padding: 10,
-            maxWidth: 400,
+            borderRadius: 6,
+            padding: 12,
+            minWidth: 260,
             maxHeight: 300,
             overflow: 'auto',
-            fontSize: 12,
+            fontSize: 13,
           }}
         >
-          {JSON.stringify(result, null, 2)}
-        </pre>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Execution Log</div>
+          {result.execution_order.map((step: any, i: number) => (
+            <div key={i} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: '1px solid #eee' }}>
+              <div>
+                <strong>Step {i + 1}:</strong> {step.prompt || '(empty prompt)'}
+              </div>
+              {step.answer ? (
+                <div style={{ color: step.answer === 'yes' ? 'green' : 'red', fontWeight: 600 }}>
+                  → {step.answer.toUpperCase()}
+                </div>
+              ) : (
+                <div style={{ color: '#c33', fontWeight: 600 }}>
+                  → {step.error || 'No answer'}
+                </div>
+              )}
+            </div>
+          ))}
+          {result.status === 'error' && (
+            <div style={{ marginTop: 8, color: '#c33', fontWeight: 600, fontSize: 12 }}>
+              ⚠ {result.message}
+            </div>
+          )}
+        </div>
+      )}
+
+      {result?.error && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 60,
+            left: 10,
+            zIndex: 10,
+            background: '#fee',
+            border: '1px solid #c33',
+            borderRadius: 6,
+            padding: 12,
+            color: '#900',
+            maxWidth: 300,
+          }}
+        >
+          {result.error}
+        </div>
       )}
 
       <ReactFlow
